@@ -210,92 +210,94 @@ Since we assume you have followed the hardening guide above to add additional us
 ```
 $ sudo apt update
 $ sudo apt-get install git -y
+$ sudo apt install software-properties-common -y # possibility to add alternative python versions, since 3.10 isn't working with LNBits
+$ sudo add-apt-repository ppa:deadsnakes/ppa -y 
+$ sudo apt install python3.7 # 3.7 seems to be the most workable solution for now
+$ sudo apt install python3.7-venv # that's the virtual environment for python to run our server
 $ git clone https://github.com/lnbits/lnbits-legend
 $ cd lnbits-legend/ 
-# ensure you have virtualenv installed, on debian/ubuntu 'sudo apt install python3-venv' should work
 # if you get an error with your instance, add the following additional packages: 'sudo  apt-get install python3-dev && sudo apt-get install build-essential'
-$ python3 -m venv venv
+$ python3.7 -m venv venv
 $ ./venv/bin/pip install -r requirements.txt
+$ mkdir data && cp .env.example .env
 $ ./venv/bin/uvicorn lnbits.__main__:app --port 5000
 ```
+
+If you run into trouble, check out the [original troubleshooting hints](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#troubleshooting). 
 Now when this is successfully starting, you can abort with CTRL-C. We will come back to this for further configuration editing LNBits' config-file to our desired setup.
-
-
-### 6) VPS: Retrieve the OpenVPN config & certificate
-In this section we'll switch our work from setting up the server towards getting your LND node ready to connect to the tunnel. For this, we will retrieve and transfer the configuration file from your VPS to your node.
-   - [ ] `docker run -v $OVPN_DATA:/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full NODE-NAME nopass` whereby `NODE-NAME` should be changed to a unique identifier you chose. For example, if your LND Node is called "BringMeSomeSats", I suggest to use that - with all lowercase.
-   - [ ] `docker run -v $OVPN_DATA:/etc/openvpn --rm kylemanna/openvpn ovpn_getclient NODE-NAME > NODE-NAME.ovpn` which will prompt you to provide the secure password you have generated earlier. Afterwards, it'll store `bringmesomesats.ovpn` in the directory you currently are.
 
 
 ## Into the Tunnel
 We have installed the tunnel through the mountain, but need to get our LND Node to use it.
 
-### 7) LND Node: Install and test the VPN Tunnel
-     2) your LND RestLNDWallet is listening on port 8080, same location under `[Application Options]` => `restlisten=0.0.0.0:8080`
-Now switch to another terminal window, and SSH into your **Lightning Node**. We want to connect to the VPS and retrieve the VPN-Config file, to be able to establish the tunnel
-```
-$ cd ~
-$ mkdir VPNcert
-$ scp user@207.154.241.101:/home/user/bringmesomesats.ovpn /home/admin/VPNcert/
-$ chmod 600 /home/admin/VPNcert/bringmesomesats.ovpn
-```
-_Note: You need to adjust `user`, the **VPS Public IP** and the absolute directory where the ovpn file is stored. We keep a copy of the cert file in the home directory for backup, but the actual file we use is `CERT.conf`._
-
-Now we need to install OpenVPN, start it up to see if it works.
-
-**Important Warning**: Depending on your network-setup, there is a slight chance your LND Node Service gets interrupted. Be aware there might be small down-times of your lightning node, as we will reconfigure things. Be patient!
+### 6) LND Node: Install and test the VPN Tunnel
+Now switch to another terminal window, and SSH into your **Lightning Node**. We want to connect to the VPS, for that, we basically replicate the steps installing wg, creating a private and public key, and connect and establish the tunnel. 
+Later, we will work with the assumption that your LND RestLNDWallet is listening on port 8080, check your lnd.conf again, under `[Application Options]` => `restlisten=0.0.0.0:8080`, or `$ cat .lnd/lnd.conf | grep restlisten`
 
 ```
-$ sudo apt-get install openvpn
-$ sudo cp -p /home/admin/VPNcert/bringmesomesats.ovpn /etc/openvpn/CERT.conf
-$ sudo systemctl enable openvpn@CERT
-$ sudo systemctl start openvpn@CERT
+$ sudo apt update
+$ sudo apt install wireguard -y
+$ sudo apt install resolvconf -y # we need that to successfully tunnel our DNS requests via the tunnel
+$ wg genkey | sudo tee /etc/wireguard/private.key
+$ sudo chmod go= /etc/wireguard/private.key
+# make a note of your private key, and keep it secret. We'll need it for the wg0.conf on your node again
+$ sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+# make a note of your public key, we will need it for the server later to allow this node to connect to it.
 ```
-You should see something similiar to the following output. Note this one line indicating the next important IP Adress `VPN Client IP: 192.168.255.6`. Make a note of it, we need it for port-configuration at the server, soon.
-```
-* openvpn@CERT.service - OpenVPN connection to CERT
-     Loaded: loaded (/lib/systemd/system/openvpn@.service; enabled; vendor preset: enabled)
-     Active: active (running) since Wed 2022-04-06 13:11:13 CEST; 4s ago
-       Docs: man:openvpn(8)
-             https://community.openvpn.net/openvpn/wiki/Openvpn24ManPage
-             https://community.openvpn.net/openvpn/wiki/HOWTO
-   Main PID: 1514818 (openvpn)
-     Status: "Initialization Sequence Completed"
-      Tasks: 1 (limit: 18702)
-     Memory: 1.0M
-        CPU: 49ms
-     CGroup: /system.slice/system-openvpn.slice/openvpn@CERT.service
-             `-1514818 /usr/sbin/openvpn --daemon ovpn-CERT --status /run/openvpn/CERT.status 10 --cd /etc/openvpn --config /etc/openvpn/CERT.conf --writepid /run/openvpn/CERT.pid
 
-Apr 06 13:11:13 debian-nuc ovpn-CERT[1514818]: WARNING: 'link-mtu' is used inconsistently, local='link-mtu 1541', remote='link-mtu 1542'
-Apr 06 13:11:13 debian-nuc ovpn-CERT[1514818]: WARNING: 'comp-lzo' is present in remote config but missing in local config, remote='comp-lzo'
-Apr 06 13:11:13 debian-nuc ovpn-CERT[1514818]: [207.154.241.101] Peer Connection Initiated with [AF_INET]207.154.241.101:1194
-Apr 06 13:11:14 debian-nuc ovpn-CERT[1514818]: TUN/TAP device tun0 opened
-Apr 06 13:11:14 debian-nuc ovpn-CERT[1514818]: net_iface_mtu_set: mtu 1500 for tun0
-Apr 06 13:11:14 debian-nuc ovpn-CERT[1514818]: net_iface_up: set tun0 up
-Apr 06 13:11:14 debian-nuc ovpn-CERT[1514818]: net_addr_ptp_v4_add: 192.168.255.6 peer 192.168.255.5 dev tun0
+Now we'll create the wg0.conf on your node. The upper interface part is your node, the Peer section are the details of your VPS WG-Server. Replace the PrivateKey on Top from your node details, and add the PublicKey and the Endpoint attributes with your WG-Server you noted down earlier. 
+
+   - Open up the `sudo nano /etc/wireguard/wg0.conf`
+
 ```
+/etc/wireguard/wg0.conf
+[Interface]
+PrivateKey = base64_encoded_peer_private_key_goes_here
+Address = 10.8.0.2/24
+
+[Peer]
+PublicKey = U9uE2kb/nrrzsEU58GD3pKFU3TLYDMCbetIsnV8eeFE=
+AllowedIPs = 0.0.0.0/0
+Endpoint = 207.154.241.101:51820
+```
+
+**Important element**: Since we want to route all traffic from your node through the tunnel, the next steps are important to follow through. This ensures that you can still access your node in your LAN at home, otherwise you'd always need to connect to your VPS, to get through the tunnel back to your node. Not desirable!
+
+   - Identify your node main IP gateway to the internet with `ip route list table main default`
+   - Make a note of the IP, eg `203.0.113.1` and the dev, eg `eth0`
+   - Now identify your node's own IP with `ip -brief address show eth0`, eg `203.0.113.5` (at home, it's more likely something like `192.168.1.20`)
+   - Lastly, in your other terminal window, make a note of your VPS' DNS Servers. Since your node will go through the tunnel, we want to ensure it can use the VPS for DNS resolving: `resolvectl dns eth0`. It'll show you one or two IPv4 IPs, use them both to be sure, eg `67.207.67.2 67.207.67.3`
+   - [ ] `sudo nano /etc/wireguard/wg0.conf`, and before the [Peer] line, add the following 4 lines:
+
+```
+PostUp = ip rule add table 200 from 203.0.113.5
+PostUp = ip route add table 200 default via 203.0.113.1
+PreDown = ip rule delete table 200 from 203.0.113.5
+PreDown = ip route delete table 200 default via 203.0.113.1
+
+DNS = 67.207.67.2 67.207.67.3
+```
+   - [ ] For the next step, let's remind ourselves about the publicKey of our node: `sudo cat /etc/wireguard/public.key`
+    
+With this completed, the node is ready to engage in the tunnel. But the server won't accept a connection. So let's add us to the allow-list, shall we? Open up the **terminal window on your VPS**, and add your node as a friendly peer.
+
+   - [ ] Ensure to replace the PublicKey of your node here: `sudo wg set wg0 peer NodePublicKey allowed-ips 10.8.0.2`
+   - [ ] Validate that your settings have been added successfully: `sudo wg`
+
+**Important Warning**: Be aware that the next step basically reroutes all your node traffic going out from home through the tunnel instead, so if you're running your LND node, there might be a small down-time following. Be patient! Now comes the first test-run. 👀
+
+   - [ ] `sudo wg-quick up wg0` which will activate your tunnel temporarily. 
+   - [ ] `sudo wg` will show you the status on both the Node terminal, as well as on the VPS. Check if you have a handshake, and traffic is recorded
+   - [ ] On your node, check if DNS resolving works with `ip route get 1.1.1.1`, the DNS service by Cloudflare.
+   - [ ] To deactivate your WG-Tunnel, just call `sudo wg-quick down wg0`
+   - [ ] If you like the results, you can make the WG-Tunnel permanent and activate itself automatically after a reboot, with the following two commands similar to the server setting earlier: `sudo systemctl enable wg-quick@wg0.service` and `sudo systemctl start wg-quick@wg0.service`, and check the status with `sudo systemctl status wg-quick@wg0.service`
+
 The tunnel between your LND Node and your VPS VPN is established. If you need to troubleshoot, call the systemctl journal via 
-`sudo journalctl -u openvpn@CERT -f --since "1 hour ago"`
+`sudo journalctl -u wg-quick@wg0.service`
 
 
-### 8) VPS: Add routing tables configuration into your droplet docker
-Back to your terminal window connected to your VPS. We have the `VPN Client IP: 192.168.255.6` now, which we need to tell our VPS where it should route those packets to. To achieve that, we'll get back into the docker container and add IPTables rules.
 
-   - [ ] [Remember](#4-vps-install-openvpn-server) how to get into the container? Arrow-up on your keyboard, or do `docker ps` and `docker exec -it <CONTAINER-ID> sh`
-   - [ ] Doublecheck your VPN Client IP, and adjust it in the following IPtables commands you enter into the container and confirm with Enter
-
-```
-$ iptables -A PREROUTING -t nat -i eth0 -p tcp -m tcp --dport 9735 -j DNAT --to 192.168.255.6:9735
-$ iptables -A PREROUTING -t nat -i eth0 -p udp -m udp --dport 9735 -j DNAT --to 192.168.255.6:9735
-$ iptables -A PREROUTING -t nat -i eth0 -p tcp -m tcp --dport 8080 -j DNAT --to 192.168.255.6:8080
-$ iptables -t nat -A POSTROUTING -d 192.168.255.0/24 -o tun0 -j MASQUERADE
-$ exit
-```
-What we basically do here, is assign a ruleset to say: As soon a packet arrives at device `eth0` on `port 9735/udp` and `/tcp`, forward it to the `VPN client` at `192.168.255.6:9735`, and vice versa everything at device `tun0`. If you have different ports or IPs, please make adjustments accordingly. What you also see, is a port `8080` preperation for LNBits packets, we'll get to this later.
-
-
-### 9) LND Node: LND adjustments to listen and channel via VPS VPN Tunnel
+### 7) LND Node: LND adjustments to listen and channel via VPS VPN Tunnel
 We switch Terminal windows again, going back to your LND Node. A quick disclaimer again, since we are fortunate enough to have plenty of good LND node solutions out there, we cannot cater for every configuration out there. Feel free to leave comments or log issues if you get stuck for your node, we'll be looking at the two most different setups here. But this should work very similar on _MyNode_, _Raspibolt_ or _Citadel_.
 
 Be very cautious with your `lnd.conf`. Make a backup before with `cp /mnt/hdd/lnd/lnd.conf /mnt/hdd/lnd/lnd.bak` so you can revert back when things don't work out. 
@@ -313,7 +315,7 @@ _Adjust ports and IPs accordingly!_
    | --- | --- |
    | `externalip=207.154.241.101:9735`           | # to add your VPS Public-IP |
    | `nat=false`                                 | # deactivate NAT |
-   | `tlsextraip=172.17.0.2`                     | # allow later LNbits-access to your rest-wallet API |
+   | `tlsextraip=10.8.0.2`                     | # allow later LNbits-access to your rest-wallet API |
 
 [**tor**]
    | Command | Description |
@@ -339,7 +341,6 @@ LND Systemd Startup adjustment
 
    | Command | Description |
    | --- | --- |
-   | `sudo nano /etc/systemd/system/lnd.service` | edit the line 15 where it starts your LND binary, and add the following parameter: `ExecStart=/usr/local/bin/lnd ${lndExtraParameter}` |
    | `sudo systemctl restart lnd.service` | apply changes and restart your lnd.service. It will ask you to reload the systemd services, copy the command, and run it with sudo. This can take a while, depends how long your last restart was. Be patient. | 
    | `sudo tail -n 30 -f /mnt/hdd/lnd/logs/bitcoin/mainnet/lnd.log` | to check whether LND is restarting properly |
    | `lncli getinfo` | to validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
@@ -348,13 +349,12 @@ LND Systemd Startup adjustment
 "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
         "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
 ```        
- - [ ] Restart your LND Node with `sudo reboot`
 </p>
 </details>
 
 <details><summary>Click here to expand Umbrel / Citadel settings</summary>
 <p>
-<!-- Add further comments for Umbrel and validate how to adjust starting LND docker with those changes, and making them persistent -->
+<!-- Add further comments for Umbrel and validate how to adjust starting LND docker for 0.5 with those changes, and making them persistent -->
 
    LND.conf adjustments, open with `sudo nano /home/umbrel/umbrel/lnd/lnd.conf`
 
@@ -364,7 +364,7 @@ LND Systemd Startup adjustment
    | --- | --- |
    | `externalip=207.154.241.101:9735` | # to add your VPS Public-IP | 
    | `nat=false`                       | # deactivate NAT | 
-   | `tlsextraip=172.17.0.2`           | # allow later LNbits-access to your rest-wallet API | 
+   | `tlsextraip=10.8.0.2`           | # allow later LNbits-access to your rest-wallet API | 
 
 [**tor**]
    | Command | Description |
@@ -377,18 +377,19 @@ LND Systemd Startup adjustment
 `CTRL-X` => `Yes` => `Enter` to save
 
 LND Restart to incorporate changes to `lnd.conf`
-   | Command | Description |
-   | --- | --- | 
-   | `cd umbrel && docker-compose restart lnd` | this can take a while, depends how long your last restart was. Be patient. | 
-   | `tail -n 30 -f ~/umbrel/lnd/logs/bitcoin/mainnet/lnd.log` | check whether LND is restarting properly | 
-   | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion | 
+   | Umbrel Version | Command | Description |
+   | --- | --- | --- |
+   | Pre 0.5 | `cd umbrel && docker-compose restart lnd` | This can take a while. Be patient. |
+   | Pre 0.5 | `tail -n 30 -f ~/umbrel/lnd/logs/bitcoin/mainnet/lnd.log` | check whether LND is restarting properly |  
+   | Pre 0.5 | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
+   | 0.5 and following | `~/umbrel/scripts/app stop lightning && ~/umbrel/scripts/app start lightning` |  same applies here: Be patient. |  
+   | 0.5 and following | `tail -f ~/umbrel/app-data/lightning/data/lnd/logs/bitcoin/mainnet/lnd.log` | Check the logs |  
+   | 0.5 and following | `~/umbrel/scripts/app compose lightning exec lnd lncli getinfo` | Check the two Uris |   
+  
 ```
 "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
         "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
 ```
- - [ ] Restart your LND Node with `sudo reboot`
-
-**Warning**: This guide did not verify yet, if and how the docker LND service on Umbrel & Citadel needs to be adjusted to channel clearnet packets via tunnel. We will add peer-reviewed adjustments here from Umbrel / Citadel devs. Until then, consider this highly experimental, it might fail.
 </p>
 </details>
 
@@ -397,7 +398,7 @@ LND Restart to incorporate changes to `lnd.conf`
 The traffic line between the two connection points is established. Worth noting that this can be extended: In case you run more than one node, just repeat the steps above for additional clients. Now, let's get LNBits talk to your node.
 
 
-### 10) LND Node: provide your VPS LNBits instance read / write access to your LND Wallet
+### 8) LND Node: provide your VPS LNBits instance read / write access to your LND Wallet
 Assuming LND restarted well on your LND Node, your LND is now listening and connectable via VPS Clearnet IP and Tor. That's quite an achievement already. But we want to setup LNBits as well, right? So go grab another beverage, now we'll get LNBits running.
 For that, let's climb another tricky obstacle; to respect the excellent security feats the LND engineering team has implemented. Since we don't want to rely on a custodial wallet provider, which would be super easy to add into LNBits, we have some more tinkering to do. Follow along to basically provide two things to your VPS from your LND Node. 
 
@@ -407,27 +408,27 @@ For that, let's climb another tricky obstacle; to respect the excellent security
 `scp ~/.lnd/tls.cert root@207.154.241.101:/root/` sends your LND Node tls.cert to your VPS, where we will use it in the next section.
 
 2) your admin.macaroon. Only with that, your VPS can send and receive payments
-`xxd -ps -u -c ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` will provide you with a long, hex-encoded string. Keep that terminal window open, since we need to copy that code and use it in our next step on the VPS.
+`xxd -ps -u  ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` will provide you with a long, hex-encoded string. Keep that terminal window open, since we need to copy that code and use it in our next step on the VPS.
 
 
 ### 11) VPS: Customize and configure LNBits to connect to your LNDRestWallet
- Now since we're back in the VPS terminal, keep your LND Node Terminal open. We'll adjust the LNBits environment settings, and we'll distinguish between _necessary_ and _optional_ adjustments. First, send the following commands:
+ Now since we're back in the VPS terminal, keep your LND Node Terminal open. We'll adjust the LNBits environment settings, and we'll distinguish between _necessary_ and _optional_ adjustments. First, send the following commands to move the cert, restrict it's access, and start editing the environment settings for LNBits:
 ```
 $ cd lnbits-legend
-$ mkdir data
-$ pwd
-$ cp .env.example .env
+$ mkdir .cert
+$ sudo mv /root/tls.cert ~/lnbits-legend/.cert/
+$ sudo chmod go= ~/lnbits-legend/.cert/
 $ sudo nano .env
 ```
-Worth noting, that the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept.
+Worth noting, that the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept. For the real deal, check out this guide how to setup your [LNBits with PostgreSQL](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#sqlite-to-postgresql-migration), which is highly reocmmended by the LNBits Dev Team. They just migrated their SQLite db as well.
 
 #### Necessary adjustments
  | Variable | Description |
  | --- | --- |
  | `LNBITS_DATA_FOLDER="/user/lnbits-legend/data"` | enter the absolute path to the data folder you created above | 
  | `LNBITS_BACKEND_WALLET_CLASS=LndRestWallet` | Specify that we want to use our LND Node Wallet Rest-API
- | `LND_REST_ENDPOINT="https://172.17.0.1:8080"` | Add your `VPS Docker IP: 172.17.0.1` on port 8080 | 
- | `LND_REST_CERT="/root/tls.cert"` | Add the link to the tls.cert file copied over earlier | 
+ | `LND_REST_ENDPOINT="https://10.8.0.2:8080"` | Add your `Lightning Node WG-Peer IP: 10.8.0.2` on port 8080 | 
+ | `LND_REST_CERT="/user/lnbits-legend/.cert/tls.cert"` | Add the link to the tls.cert file copied over earlier | 
  | `LND_REST_MACAROON="HEXSTRING"` | Copy the hex-encoded snippet from your LND Node Terminal output from Section 11.2 in here | 
  
  #### Optional adjustments
