@@ -91,7 +91,7 @@ Suggested Laundry-List, you can tick them off while you go through this guide
 
 ### Visualize
 Some of us are visual people. Draw your diagram to get an idea how you want things to flow
-![Hight-lvl-Flowchart](https://github.com/TrezorHannes/vps-lnbits/blob/main/VPN_LNBits.png?raw=true)
+![High-lvl-Flowchart](https://github.com/TrezorHannes/vps-lnbits-wg/blob/57cda6f166e4792534df1b9407466fb1c93733dd/Wireguard%20VPN_LNBits.drawio.png)
 
 ### Secure
 It goes without saying, but this guide doesn't go into the necessary security steps in detail, and can't take on liability for any things breaking or losing funds. Ensure you don't get reckless, start with small funds you're ok to lose. Keep an eye on developments or in touch with the active Telegram Groups, to get news and updates with low delays. Also, would recommend to do those steps with a peer, so you follow a second pair of eye review. Lastly, 2fa / yubikeys are your friends!
@@ -101,7 +101,7 @@ It goes without saying, but this guide doesn't go into the necessary security st
 Well, let's get into it, shall we?!
 
 ### 1) Lightning Node
-We will consider you have your **Lightning Node up and running**, connected via Tor and some funds on it. You also have SSH access to it and administrative privilidges
+We will consider you have your **Lightning Node up and running**, connected via Tor and some funds on it. You also have SSH access to it and administrative privileges.
 
 ### 2) VPS: Setup 
 In case you don't have a **VPS provider** already, sign-up with [my referal](https://m.do.co/c/5742b053ef6d) or [pick another](https://www.vpsbenchmarks.com/best_vps/2022) which provides you with a static IP and cheap costs. Maybe you even prefer one payable with Lightning ⚡. In case you go for DigitalOcean, here are the steps to create a Droplet, shouldn't take longer than a few minutes:
@@ -171,7 +171,7 @@ Save your changes again with `CTRL+X`, then `Y` and `Enter`
 
 #### 4.2) VPS: LND and LNBits Port-Forwarding
 Following the above section about packets going out, we want to ensure LND and LNBits packets coming into your VPS will get forwarded to your node. We do this step now already, even though the Node isn't connected to the tunnel yet. The following pre-requisite is important to check, in case your system is different, please alter the LND port accordingly:
-   - your current LND Node configuration is listening on port 9735, which you can verify by looking into your `cat ~/.lnd/lnd.conf` => `[Application Options]` => `listen=0.0.0.0:9735`
+   - Assumption: your current LND Node configuration is listening on port 9735, which you can verify by looking into your `cat ~/.lnd/lnd.conf` => `[Application Options]` => `listen=0.0.0.0:9735`
    - add the following forwarding and routing rules to your iptables
 ```       
 sudo iptables -P FORWARD DROP
@@ -189,6 +189,7 @@ sudo systemctl enable netfilter-persistent
 ```
    - **Now don't forget** to allow SSH access and the WG UDP port: `sudo ufw allow 51820/udp` and `sudo ufw allow OpenSSH`
    - **Best Practice**: Only allow SSH in from your home-IP: `sudo ufw allow from 185.111.222.0/24 proto tcp to any port 22 comment 'SSH from Home'`. Stay connected with two terminals and try to login once you do the below, to ensure you don't lock yourself out
+   - Ensure to do the next step again with two terminals logged in, so you can test if your UFW setting let's you login. In case you lock yourself out, you need to reimage the machine, and we want to avoid that learning exercise.
    - `sudo ufw disable` and `sudo ufw enable` # Refresh uncomplicated firewall, and check the status with `sudo ufw status -v`
    
 #### 4.2) VPS: Start your WireGuard Server
@@ -196,25 +197,23 @@ sudo systemctl enable netfilter-persistent
    - `sudo systemctl start wg-quick@wg0.service` # to start the service
    - `sudo systemctl status wg-quick@wg0.service` # to check whether it's running fine
    
-   
-   
-     1) your current LND Node configuration is listening on port 9735, which you can verify by looking into your `cat ~/.lnd/lnd.conf` => `[Application Options]` => `listen=0.0.0.0:9735`
-     2) your LND RestLNDWallet is listening on port 8080, same location under `[Application Options]` => `restlisten=0.0.0.0:8080`
+Your Wireguard Server is now running, which means the Internet can now connect to your VPS via ports 80, 443, 9735 (and 22 SSH from your home), and it has a closed tunnel established on port 51820. You need to doublecheck your notes with these 3 items essential for your new running frontend server.
 
-Your OpenVPN Server is now running, which means the Internet can now connect to your VPS via ports 80, 443, 9735 (and 22 SSH), and it has a closed tunnel established on port 1194. You need to complement your notes with the IP-Adresses which are essentially added with the running server.
+   - [ ] VPS Wireguard IP: Run `ip address` and you typically find 3 devices listed with IPs assigned. Your `lo/loopback` which you can ignore, your `eth0` being your link to the internet, and the new `wg0` IP which we have assigned ourselves in the wg0.conf earlier
+   - [ ] The port you have defined in your wg0.conf, `51820` if you just followed the guide above
+   - [ ] Your Wireguard Server Public Key
 
-   - [ ] CONTAINER-ID: `docker ps` to list your docker container. In the first column, you will find the `CONTAINER-ID`, usually a cryptic 12-digit number/character combination. Copy into the clipboard and make a note of it. 
-   - [ ] Docker Shell: Get into the container, with `docker exec -it <CONTAINER-ID> sh`. 
-   - [ ] VPS Docker IP: Run `ifconfig` and you typically find 3 devices listed with IPs assigned. Make a note of the one with eth0, which is your own `VPS Docker IP: 172.17.0.2`. Type `exit` to get out of the docker-shell.
 
 ### 5) VPS: Install LNBits
-Next we will install [LNBits](https://lnbits.com/) on this server, since it'll allow to keep your node independent and light-weight. It also allows to change nodes swiftly in-case you need to move things. We won't install it via Docker (like Umbrel does), but do the implementation based slightly on their [Github Installation Guide](https://github.com/lnbits/lnbits-legend/blob/main/docs/devs/installation.md). You can also follow their [own, excellent video walkthrough](https://youtu.be/WJRxJtYZAn4?t=49) here. Just don't use Ben's commands, since these are a little dated.
+Next we will install [LNBits](https://lnbits.com/) on this server, since it'll allow to keep your node independent and light-weight. It also allows to change nodes swiftly in-case you need to move things. We won't install it via Docker (like Umbrel does), but do the implementation based  on their [Github Installation Guide](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md). You can also follow their [own, excellent video walkthrough](https://youtu.be/WJRxJtYZAn4?t=49) here. Just don't use Ben's commands, since these are a little dated.
 Since we assume you have followed the hardening guide above to add additional users, we will now have to use `sudo` in our commands.
 ```
-$ sudo apt-get install git
-$ git clone https://github.com/lnbits/lnbits-legend
 $ sudo apt update
-# ensure you have virtualenv installed, on debian/ubuntu 'apt install python3-venv' should work
+$ sudo apt-get install git -y
+$ git clone https://github.com/lnbits/lnbits-legend
+$ cd lnbits-legend/ 
+# ensure you have virtualenv installed, on debian/ubuntu 'sudo apt install python3-venv' should work
+# if you get an error with your instance, add the following additional packages: 'sudo  apt-get install python3-dev && sudo apt-get install build-essential'
 $ python3 -m venv venv
 $ ./venv/bin/pip install -r requirements.txt
 $ ./venv/bin/uvicorn lnbits.__main__:app --port 5000
@@ -232,6 +231,7 @@ In this section we'll switch our work from setting up the server towards getting
 We have installed the tunnel through the mountain, but need to get our LND Node to use it.
 
 ### 7) LND Node: Install and test the VPN Tunnel
+     2) your LND RestLNDWallet is listening on port 8080, same location under `[Application Options]` => `restlisten=0.0.0.0:8080`
 Now switch to another terminal window, and SSH into your **Lightning Node**. We want to connect to the VPS and retrieve the VPN-Config file, to be able to establish the tunnel
 ```
 $ cd ~
