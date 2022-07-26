@@ -105,23 +105,23 @@ We will consider you have your **Lightning Node up and running**, connected via 
 
 ### 2) VPS: Setup 
 In case you don't have a **VPS provider** already, sign-up with [my referal](https://m.do.co/c/5742b053ef6d) or [pick another](https://www.vpsbenchmarks.com/best_vps/2022) which provides you with a static IP and cheap costs. Maybe you even prefer one payable with Lightning ⚡. In case you go for DigitalOcean, here are the steps to create a Droplet, shouldn't take longer than a few minutes:
-   - [ ] add a new Droplet on the left hand navigation
-   - [ ] chose an OS of your preference, I have Ubuntu 20.04 (LTS) x64
-   - [ ] take the Basic Plan with a shared CPU, that's enough power. You can upgrade anytime if necessary
-   - [ ] Switch the CPU option to "Regular Intel with SSD", which should get you down to $5/month
-   - [ ] You don't need an extra volume, but pick a datacenter region of your liking
-   - [ ] Authentication: Chose the SSH keys option and follow the next steps to add your public keys in here for secure access. For Windows, with putty and putty-gen referenced above, you should be relatively quick to use those keys instead of a password. [For Linux users](https://serverpilot.io/docs/how-to-use-ssh-public-key-authentication/), you probably know your ways already.
-   - [ ] Add backups (costs), Monitoring or IPv6 if you wish to, however this guide won't use any of those items
-   - [ ] Lastly, chose a tacky hostname, something which resonates with you, eg myLNBits-VPS
+   - add a new Droplet on the left hand navigation
+   - chose an OS of your preference, I have Ubuntu 20.04 (LTS) x64
+   - take the Basic Plan with a shared CPU, that's enough power. You can upgrade anytime if necessary
+   - Switch the CPU option to "Regular Intel with SSD", which should get you down to $5/month
+   - You don't need an extra volume, but pick a datacenter region of your liking
+   - Authentication: Chose the SSH keys option and follow the next steps to add your public keys in here for secure access. For Windows, with putty and putty-gen referenced above, you should be relatively quick to use those keys instead of a password. [For Linux users](https://serverpilot.io/docs/how-to-use-ssh-public-key-authentication/), you probably know your ways already.
+   - Add backups (costs), Monitoring or IPv6 if you wish to, however this guide won't use any of those items
+   - Lastly, chose a tacky hostname, something which resonates with you, eg myLNBits-VPS
 
 After a few magic cloud things happening, you have your Droplet initiated and it provides you with a public IPv4 Adress. Add it to your notes! In this guide, I'll refer to it as `VPS Public IP: 207.154.241.101`
 
 
 ### 3) VPS: Connect to your VPS and tighten it up
 Connect to your VPS via `SSH root@207.154.241.101` and you will be welcomed on your new, remote server. Next steps are critical to do right away, harden your setup:
-   - [ ] Update your packages: `apt-get update` and `apt-get upgrade`
-   - [ ] [Add a new Sudo User](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-22-04)
-   - [ ] Enable Uncomplicated Firewall (UFW) and add ports to be allowed to connected to: 
+   - Update your packages: `apt-get update` and `apt-get upgrade`
+   - [Add a new Sudo User](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-22-04)
+   - Enable Uncomplicated Firewall (UFW) and add ports to be allowed to connected to: 
 ```
 $ apt install ufw
 $ ufw default deny incoming
@@ -132,8 +132,8 @@ $ ufw allow 443 comment 'SSL Webserver'
 $ ufw allow 9735 comment 'LND Main Node 1'
 $ ufw enable
 ```
-   - [ ] Follow [further hardening steps](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-18-04)
-   - [ ] Install fail2ban to protect your SSH user, it runs automatically on it's own `sudo apt install fail2ban`
+   - Follow [further hardening steps](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-18-04)
+   - Install fail2ban to protect your SSH user, it runs automatically on it's own `sudo apt install fail2ban`
 
 ### 4) VPS: Install Wireguard
 We basically follow the guide [Digital Ocean provides here](https://www.digitalocean.com/community/tutorials/how-to-set-up-wireguard-on-ubuntu-22-04). Read the full article and follow the steps for fully detailed context on commands listed below. We'll also skip IPv6 for now, as it'll make things unneccessarily complex to follow
@@ -267,7 +267,7 @@ Endpoint = 207.154.241.101:51820
    - Make a note of the IP, eg `203.0.113.1` and the dev, eg `eth0`
    - Now identify your node's own IP with `ip -brief address show eth0`, eg `203.0.113.5` (at home, it's more likely something like `192.168.1.20`)
    - Lastly, in your other terminal window, make a note of your VPS' DNS Servers. Since your node will go through the tunnel, we want to ensure it can use the VPS for DNS resolving: `resolvectl dns eth0`. It'll show you one or two IPv4 IPs, use them both to be sure, eg `67.207.67.2 67.207.67.3`
-   - [ ] `sudo nano /etc/wireguard/wg0.conf`, and before the [Peer] line, add the following 4 lines:
+   - `sudo nano /etc/wireguard/wg0.conf`, and before the [Peer] line, add the following 4 lines:
 
 ```
 PostUp = ip rule add table 200 from 203.0.113.5
@@ -281,20 +281,19 @@ DNS = 67.207.67.2 67.207.67.3
     
 With this completed, the node is ready to engage in the tunnel. But the server won't accept a connection. So let's add us to the allow-list, shall we? Open up the **terminal window on your VPS**, and add your node as a friendly peer.
 
-   - [ ] Ensure to replace the PublicKey of your node here: `sudo wg set wg0 peer NodePublicKey allowed-ips 10.8.0.2`
-   - [ ] Validate that your settings have been added successfully: `sudo wg`
+   - Ensure to replace the PublicKey of your node here: `sudo wg set wg0 peer NodePublicKey allowed-ips 10.8.0.2`
+   - Validate that your settings have been added successfully: `sudo wg`
 
 **Important Warning**: Be aware that the next step basically reroutes all your node traffic going out from home through the tunnel instead, so if you're running your LND node, there might be a small down-time following. Be patient! Now comes the first test-run. 👀
 
-   - [ ] `sudo wg-quick up wg0` which will activate your tunnel temporarily. 
-   - [ ] `sudo wg` will show you the status on both the Node terminal, as well as on the VPS. Check if you have a handshake, and traffic is recorded
-   - [ ] On your node, check if DNS resolving works with `ip route get 1.1.1.1`, the DNS service by Cloudflare.
-   - [ ] To deactivate your WG-Tunnel, just call `sudo wg-quick down wg0`
-   - [ ] If you like the results, you can make the WG-Tunnel permanent and activate itself automatically after a reboot, with the following two commands similar to the server setting earlier: `sudo systemctl enable wg-quick@wg0.service` and `sudo systemctl start wg-quick@wg0.service`, and check the status with `sudo systemctl status wg-quick@wg0.service`
+   - `sudo wg-quick up wg0` which will activate your tunnel temporarily. 
+   - `sudo wg` will show you the status on both the Node terminal, as well as on the VPS. Check if you have a handshake, and traffic is recorded
+   - On your node, check if DNS resolving works with `ip route get 1.1.1.1`, the DNS service by Cloudflare.
+   - To deactivate your WG-Tunnel, just call `sudo wg-quick down wg0`
+   - If you like the results, you can make the WG-Tunnel permanent and activate itself automatically after a reboot, with the following two commands similar to the server setting earlier: `sudo systemctl enable wg-quick@wg0.service` and `sudo systemctl start wg-quick@wg0.service`, and check the status with `sudo systemctl status wg-quick@wg0.service`
 
 The tunnel between your LND Node and your VPS VPN is established. If you need to troubleshoot, call the systemctl journal via 
 `sudo journalctl -u wg-quick@wg0.service`
-
 
 
 ### 7) LND Node: LND adjustments to listen and channel via VPS VPN Tunnel
@@ -377,14 +376,19 @@ LND Systemd Startup adjustment
 `CTRL-X` => `Yes` => `Enter` to save
 
 LND Restart to incorporate changes to `lnd.conf`
-   | Umbrel Version | Command | Description |
-   | --- | --- | --- |
-   | Pre 0.5 | `cd umbrel && docker-compose restart lnd` | This can take a while. Be patient. |
-   | Pre 0.5 | `tail -n 30 -f ~/umbrel/lnd/logs/bitcoin/mainnet/lnd.log` | check whether LND is restarting properly |  
-   | Pre 0.5 | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
-   | 0.5 and following | `~/umbrel/scripts/app stop lightning && ~/umbrel/scripts/app start lightning` |  same applies here: Be patient. |  
-   | 0.5 and following | `tail -f ~/umbrel/app-data/lightning/data/lnd/logs/bitcoin/mainnet/lnd.log` | Check the logs |  
-   | 0.5 and following | `~/umbrel/scripts/app compose lightning exec lnd lncli getinfo` | Check the two Uris |   
+  **Umbrel Version Pre 0.5**
+   | Command | Description |
+   | --- | --- |
+   | `cd umbrel && docker-compose restart lnd` | This can take a while. Be patient. |
+   | `tail -n 30 -f ~/umbrel/lnd/logs/bitcoin/mainnet/lnd.log` | check whether LND is restarting properly |  
+   | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
+  
+  **Umbrel Version 0.5 and following**
+   | Command | Description |
+   | --- | --- |
+   | `~/umbrel/scripts/app stop lightning && ~/umbrel/scripts/app start lightning` |  same applies here: Be patient. |  
+   | `tail -f ~/umbrel/app-data/lightning/data/lnd/logs/bitcoin/mainnet/lnd.log` | Check the logs |  
+   | `~/umbrel/scripts/app compose lightning exec lnd lncli getinfo` | Check the two Uris looking like below |   
   
 ```
 "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
@@ -405,13 +409,13 @@ For that, let's climb another tricky obstacle; to respect the excellent security
 **Note of warning again**: Both of those files are highly sensitive. Don't show them to anyone, don't transfer them via Email, just follow the secure channel below and you should be fine, as long you keep the security barriers installed in [Section "Secure"](#secure) intact.
 
 1) your tls.cert. Only with access to this file, your VPS is going to be allowed to leverage your LND Wallet via Rest-API
-`scp ~/.lnd/tls.cert root@207.154.241.101:/root/` sends your LND Node tls.cert to your VPS, where we will use it in the next section.
+`scp ~/.lnd/tls.cert root@207.154.241.101:/root/` sends your LND Node tls.cert to your VPS, where we will use it in the next section. Be aware that this file changes **only** after you have added the `tlsextraip` settings in `lnd.conf`, and restarted LND. Check it's creation date with `ls -la ~/.lnd/tls.cert` to ensure it's quite recent. Otherwise your changes are not implemented and the certificate not valid.
 
 2) your admin.macaroon. Only with that, your VPS can send and receive payments
 `xxd -ps -u  ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` will provide you with a long, hex-encoded string. Keep that terminal window open, since we need to copy that code and use it in our next step on the VPS.
 
 
-### 11) VPS: Customize and configure LNBits to connect to your LNDRestWallet
+### 9) VPS: Customize and configure LNBits to connect to your LNDRestWallet
  Now since we're back in the VPS terminal, keep your LND Node Terminal open. We'll adjust the LNBits environment settings, and we'll distinguish between _necessary_ and _optional_ adjustments. First, send the following commands to move the cert, restrict it's access, and start editing the environment settings for LNBits:
 ```
 $ cd lnbits-legend
@@ -420,7 +424,7 @@ $ sudo mv /root/tls.cert ~/lnbits-legend/.cert/
 $ sudo chmod go= ~/lnbits-legend/.cert/
 $ sudo nano .env
 ```
-Worth noting, that the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept. For the real deal, check out this guide how to setup your [LNBits with PostgreSQL](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#sqlite-to-postgresql-migration), which is highly reocmmended by the LNBits Dev Team. They just migrated their SQLite db as well.
+Worth noting, that the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept. For the real deal, check out this guide how to setup your [LNBits with PostgreSQL](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#sqlite-to-postgresql-migration), which is highly reocmmended by the LNBits Dev Team. They just migrated their SQLite db to postgres as well.
 
 #### Necessary adjustments
  | Variable | Description |
