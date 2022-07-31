@@ -290,7 +290,7 @@ With this completed, the node is ready to engage in the tunnel. But the server w
    - `sudo wg` will show you the status on both the Node terminal, as well as on the VPS. Check if you have a handshake, and traffic is recorded
    - On your node, check if DNS resolving works with `ip route get 1.1.1.1`, the DNS service by Cloudflare.
    - To deactivate your WG-Tunnel, just call `sudo wg-quick down wg0`
-   - If you like the results, you can make the WG-Tunnel permanent and activate itself automatically after a reboot, with the following two commands similar to the server setting earlier: `sudo systemctl enable wg-quick@wg0.service` and `sudo systemctl start wg-quick@wg0.service`, and check the status with `sudo systemctl status wg-quick@wg0.service`
+   - If you like the results, you can make the WG-Tunnel permanent and activate itself automatically after a reboot, with the following two commands similar to the server setting earlier: first deactivate the current tunnel if running, with `sudo wg-quick down wg0`, then add it to your systemd startup-routine with `sudo systemctl enable wg-quick@wg0.service` and `sudo systemctl start wg-quick@wg0.service`, and check the status with `sudo systemctl status wg-quick@wg0.service`
 
 The tunnel between your LND Node and your VPS VPN is established. If you need to troubleshoot, call the systemctl journal via 
 `sudo journalctl -u wg-quick@wg0.service`
@@ -384,12 +384,13 @@ LND Restart to incorporate changes to `lnd.conf`
    | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
   
   **Umbrel Version 0.5 and following**
-   | Command | Description |
+  Unfortunately, this node solution currently doesn't support external TLS-secured access to your LND-wallet. [There might be ways](https://github.com/getumbrel/umbrel/issues/1421#issuecomment-1200123882) to get there, so follow the issue in the link here, but I suggest to wait until the umbrel-team allows proper `lnd.conf` settings.
+<!--    | Command | Description |
    | --- | --- |
    | `~/umbrel/scripts/app stop lightning && ~/umbrel/scripts/app start lightning` |  same applies here: Be patient. |  
    | `tail -f ~/umbrel/app-data/lightning/data/lnd/logs/bitcoin/mainnet/lnd.log` | Check the logs |  
    | `~/umbrel/scripts/app compose lightning exec lnd lncli getinfo` | Check the two Uris looking like below |   
-  
+  -->
 ```
 "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
         "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
