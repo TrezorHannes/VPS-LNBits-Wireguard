@@ -325,7 +325,8 @@ _Adjust ports and IPs accordingly!_
    | `tor.skip-proxy-for-clearnet-targets=true`  | # activate hybrid mode |
 
 `CTRL-X` => `Yes` => `Enter` to save
-
+<!-- Need to adjust for raspiblitz 1.8.0 that file sudo nano /home/admin/config.scripts/lnd.check.sh / line 184 needs to be commented out -->
+  
 RASPIBLITZ CONFIG FILE
 `sudo nano /mnt/hdd/raspiblitz.conf` since Raspiblitz has some LND pre-check scripts which otherwise overwrite your settings.
    | Command | Description |
@@ -409,8 +410,7 @@ For that, let's climb another tricky obstacle; to respect the excellent security
 
 **Note of warning again**: Both of those files are highly sensitive. Don't show them to anyone, don't transfer them via Email, just follow the secure channel below and you should be fine, as long you keep the security barriers installed in [Section "Secure"](#secure) intact.
 
-1) your tls.cert. Only with access to this file, your VPS is going to be allowed to leverage your LND Wallet via Rest-API
-`scp ~/.lnd/tls.cert root@207.154.241.101:/root/` sends your LND Node tls.cert to your VPS, where we will use it in the next section. Be aware that this file changes **only** after you have added the `tlsextraip` settings in `lnd.conf`, and restarted LND. Check it's creation date with `ls -la ~/.lnd/tls.cert` to ensure it's quite recent. Otherwise your changes are not implemented and the certificate not valid.
+1) your tls.cert. Be aware that this file changes **only** after you have added the `tlsextraip` settings in `lnd.conf`, and restarted LND. Check it's creation date with `ls -la ~/.lnd/tls.cert` to ensure it's quite recent. Otherwise your changes are not implemented and the certificate not valid. Only with access to this file, your VPS is going to be allowed to leverage your LND Wallet via Rest-API. Switch terminals to your VPS, and pull the file via  `scp admin@10.8.0.2:/home/admin/.lnd/tls.cert ./` to your VPS. Place it somewhere safe (eg `~/.cert`) and lock it up `chmod 600 ~/.cert/tls.cert`. 
 
 2) your admin.macaroon. Only with that, your VPS can send and receive payments
 `xxd -ps -u  ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` will provide you with a long, hex-encoded string. Keep that terminal window open, since we need to copy that code and use it in our next step on the VPS.
