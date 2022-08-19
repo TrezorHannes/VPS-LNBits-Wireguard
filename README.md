@@ -1,5 +1,6 @@
 # VPS-LNbits with WireGuard VPN
 _An alternative Documentation to setup LNbits on a VPS, connected to your Lightning Network Node through a secured tunnel_
+
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Brenner_Base_Tunnel_Aicha-Mauls.jpg/640px-Brenner_Base_Tunnel_Aicha-Mauls.jpg" alt="Brennerbasistunnel – Wikipedia"/>
 
 This is a fork / alternative my Guide [provided here](https://github.com/TrezorHannes/vps-lnbits), but instead of OpenVPN, we're using the somewhat smaller / simpler WireGuard Solution.
