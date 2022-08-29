@@ -463,7 +463,7 @@ Worth noting, that the directory `data` will hold all your database SQLite3 file
  
 ### VPS: Start LNBits and test the LND Node wallet connection
  As soon you got here, we got the most complex things done 💪. The next few steps will be a walk in the park. Get another beverage, and then we will add LNBits to your [systemd service](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#lnbits-as-a-systemd-service) to automatically start / restart it after reboots.
-Create a new config file with `nano /etc/systemd/system/lnbits.service` and add the following content. Please adjust the lnbits working directory accordingly
+Create a new config file with `sudo nano /etc/systemd/system/lnbits.service` and add the following content. Please adjust the lnbits working directory accordingly
 ```
 # Systemd unit for lnbits
 # /etc/systemd/system/lnbits.service
@@ -483,6 +483,11 @@ Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
+```
+Save and then enable it
+```
+sudo systemctl enable lnbits.service
+sudo systemctl start lnbits.service
 ```
 When this is successful, it'll report your wallet balance of your node, and you can move on. If not, a good debugging approach is to connect from the VPS to your node via `curl https://10.8.0.2:8080 -v --cacert /user/.cert/tls.cert`. 
 
