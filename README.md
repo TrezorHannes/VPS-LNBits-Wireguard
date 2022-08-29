@@ -269,6 +269,7 @@ Address = 10.8.0.2/24
 PublicKey = U9uE2kb/nrrzsEU58GD3pKFU3TLYDMCbetIsnV8eeFE=
 AllowedIPs = 0.0.0.0/0
 Endpoint = 207.154.241.101:51820
+PersistentKeepalive = 25
 ```
 
 **Important element**: Since we want to route all traffic from your node through the tunnel, the next steps are important to follow through. This ensures that you can still access your node in your LAN at home, otherwise you'd always need to connect to your VPS, to get through the tunnel back to your node. Not desirable!
