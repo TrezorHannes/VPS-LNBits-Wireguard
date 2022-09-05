@@ -220,6 +220,7 @@ $ cd lnbits-legend/
 
 $ python3.7 -m venv venv
 $ ./venv/bin/pip install -r requirements.txt
+$ ./venv/bin/python build.py
 $ mkdir data && cp .env.example .env
 $ ./venv/bin/uvicorn lnbits.__main__:app --port 5000
 ```
