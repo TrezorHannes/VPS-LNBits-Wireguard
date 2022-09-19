@@ -194,6 +194,7 @@ sudo iptables -t nat -A POSTROUTING -o wg0 -p tcp --dport 9735 -d 10.8.0.2 -j SN
    To keep those rules active after a reboot, another little nifty toolset is necessary to install:
 ```
 sudo apt install netfilter-persistent
+sudo apt install iptables-persistent
 sudo netfilter-persistent save
 sudo systemctl enable netfilter-persistent
 ```
