@@ -1,3 +1,4 @@
+
 # VPS-LNbits with WireGuard VPN
 _An alternative Documentation to setup LNbits on a VPS, connected to your Lightning Network Node through a secured tunnel_
 
@@ -316,7 +317,7 @@ The brackets below indicate the section where each line needs to be added to. Do
 
 _Adjust ports and IPs accordingly!_
 
-<details><summary>Click here to expand Raspiblitz / Raspibolt settings</summary>
+<details><summary>Click here to expand  Raspibolt settings</summary>
 <p>
 
    LND.conf adjustments, open with `sudo nano /mnt/hdd/lnd/lnd.conf`
@@ -337,7 +338,43 @@ _Adjust ports and IPs accordingly!_
    | `tor.skip-proxy-for-clearnet-targets=true`  | # activate hybrid mode |
 
 `CTRL-X` => `Yes` => `Enter` to save
-<!-- Need to adjust for raspiblitz 1.8.0 that file sudo nano /home/admin/config.scripts/lnd.check.sh / line 184 needs to be commented out -->
+
+LND Systemd Startup adjustment
+
+   | Command | Description |
+   | --- | --- |
+   | `sudo systemctl restart lnd.service` | apply changes and restart your lnd.service. It will ask you to reload the systemd services, copy the command, and run it with sudo. This can take a while, depends how long your last restart was. Be patient. | 
+   | `sudo tail -n 30 -f /mnt/hdd/lnd/logs/bitcoin/mainnet/lnd.log` | to check whether LND is restarting properly |
+   | `lncli getinfo` | to validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
+
+   ```
+"03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
+        "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
+```        
+</p>
+</details>
+
+<details><summary>Click here to expand Raspiblitz 1.7.x settings</summary>
+<p>
+
+   LND.conf adjustments, open with `sudo nano /mnt/hdd/lnd/lnd.conf`
+
+[**Application Options**]
+   | Command | Description |
+   | --- | --- |
+   | `externalip=207.154.241.101:9735`           | # to add your VPS Public-IP |
+   | `nat=false`                                 | # deactivate NAT |
+   | `tlsextraip=10.8.0.2`                     | # allow later LNbits-access to your rest-wallet API |
+
+[**tor**]
+   | Command | Description |
+   | --- | --- |
+   | `tor.active=true`                           | # ensure Tor is active |
+   | `tor.v3=true`                               | # with the latest version. v2 is going to be deprecated this summer |
+   | `tor.streamisolation=false`                 | # this needs to be false, otherwise hybrid mode doesn't work |
+   | `tor.skip-proxy-for-clearnet-targets=true`  | # activate hybrid mode |
+
+`CTRL-X` => `Yes` => `Enter` to save
   
 RASPIBLITZ CONFIG FILE
 `sudo nano /mnt/hdd/raspiblitz.conf` since Raspiblitz has some LND pre-check scripts which otherwise overwrite your settings.
@@ -364,11 +401,62 @@ LND Systemd Startup adjustment
 </p>
 </details>
 
-<details><summary>Click here to expand Umbrel / Citadel settings</summary>
+<details><summary>Click here to expand Raspiblitz 1.8.x settings</summary>
+<p>
+
+   LND.conf adjustments, open with `sudo nano /mnt/hdd/lnd/lnd.conf`
+
+[**Application Options**]
+   | Command | Description |
+   | --- | --- |
+   | `externalip=207.154.241.101:9735`           | # to add your VPS Public-IP |
+   | `nat=false`                                 | # deactivate NAT |
+   | `tlsextraip=10.8.0.2`                     | # allow later LNbits-access to your rest-wallet API |
+
+[**tor**]
+   | Command | Description |
+   | --- | --- |
+   | `tor.active=true`                           | # ensure Tor is active |
+   | `tor.v3=true`                               | # with the latest version. v2 is going to be deprecated this summer |
+   | `tor.streamisolation=false`                 | # this needs to be false, otherwise hybrid mode doesn't work |
+   | `tor.skip-proxy-for-clearnet-targets=true`  | # activate hybrid mode |
+
+`CTRL-X` => `Yes` => `Enter` to save
+  
+RASPIBLITZ LND-checkup FILE
+`sudo nano /home/admin/config.scripts/lnd.check.sh` since Raspiblitz has some LND pre-check scripts which otherwise overwrite your settings. Go to line 184 or search for `enforce PublicIP if (if not running Tor)`. Uncomment those 5 lines indicated here:
+
+```
+#  if [ "${runBehindTor}" != "on" ]; then
+#    setting ${lndConfFile} ${insertLine} "externalip" "${publicIP}:${lndPort}"
+#  else
+    # when running Tor a public ip can make startup problems - so remove
+#    sed -i '/^externalip=*/d' ${lndConfFile}
+#  fi
+```
+
+`CTRL-X` => `Yes` => `Enter` to save
+
+LND Systemd Startup adjustment
+
+   | Command | Description |
+   | --- | --- |
+   | `sudo systemctl restart lnd.service` | apply changes and restart your lnd.service. It will ask you to reload the systemd services, copy the command, and run it with sudo. This can take a while, depends how long your last restart was. Be patient. | 
+   | `sudo tail -n 30 -f /mnt/hdd/lnd/logs/bitcoin/mainnet/lnd.log` | to check whether LND is restarting properly |
+   | `lncli getinfo` | to validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
+
+   ```
+"03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
+        "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
+```        
+</p>
+</details>
+
+<details><summary>Click here to expand Umbrel Pre-0.5 & Citadel settings</summary>
 <p>
 <!-- Add further comments for Umbrel and validate how to adjust starting LND docker for 0.5 with those changes, and making them persistent -->
 
-   LND.conf adjustments, open with `sudo nano /home/umbrel/umbrel/lnd/lnd.conf`
+ LND.conf adjustments, open with `sudo nano /home/umbrel/umbrel/lnd/lnd.conf`
 
    
 [**Application Options**]
@@ -389,30 +477,55 @@ LND Systemd Startup adjustment
 `CTRL-X` => `Yes` => `Enter` to save
 
 LND Restart to incorporate changes to `lnd.conf`
-```
-"03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
-        "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
-```
-
-  **Umbrel Version 0.5 and following**
-  Unfortunately, this node solution currently doesn't support external TLS-secured access to your LND-wallet. [There might be ways](https://github.com/getumbrel/umbrel/issues/1421#issuecomment-1200123882) to get there, so follow the issue in the link here, but I suggest to wait until the umbrel-team allows proper `lnd.conf` settings.
-<!--    
-  **Umbrel Version Pre 0.5**
    | Command | Description |
    | --- | --- |
    | `cd umbrel && docker-compose restart lnd` | This can take a while. Be patient. |
    | `tail -n 30 -f ~/umbrel/lnd/logs/bitcoin/mainnet/lnd.log` | check whether LND is restarting properly |  
    | `~/umbrel/bin/lncli getinfo` | validate that your node is now online with two uris, your pub-id@VPS-IP and pub-id@Tor-onion |
-  
+```
+"03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
+        "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
+```
+</p>
+</details>
 
+<details><summary>Click here to expand Umbrel Version 0.5.x  settings</summary>
+<p>
+<!-- Add further comments for Umbrel and validate how to adjust starting LND docker for 0.5 with those changes, and making them persistent -->
+
+
+ LND.conf adjustments, open with `sudo nano /home/umbrel/umbrel/lnd/lnd.conf`
+
+   
+[**Application Options**]
+   | Command | Description |
+   | --- | --- |
+   | `externalip=207.154.241.101:9735` | # to add your VPS Public-IP | 
+   | `nat=false`                       | # deactivate NAT | 
+   | `tlsextraip=10.8.0.2`           | # allow later LNbits-access to your rest-wallet API | 
+
+[**tor**]
+   | Command | Description |
+   | --- | --- |
+   | `tor.active=true`                          | # ensure Tor is active | 
+   | `tor.v3=true`                              | # with the latest version. v2 is going to be deprecated this summer | 
+   | `tor.streamisolation=false`                | # this needs to be false, otherwise hybrid mode doesn't work | 
+   | `tor.skip-proxy-for-clearnet-targets=true` | # activate hybrid mode | 
+
+`CTRL-X` => `Yes` => `Enter` to save
+
+LND Restart to incorporate changes to `lnd.conf`
   | Command | Description |
    | --- | --- |
    | `~/umbrel/scripts/app stop lightning && ~/umbrel/scripts/app start lightning` |  same applies here: Be patient. |  
    | `tail -f ~/umbrel/app-data/lightning/data/lnd/logs/bitcoin/mainnet/lnd.log` | Check the logs |  
    | `~/umbrel/scripts/app compose lightning exec lnd lncli getinfo` | Check the two Uris looking like below |   
 
+  ```
+"03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@207.154.241.101:9736",
+        "03502e39bb6ebfacf4457da9ef84cf727fbfa37efc7cd255b088de426aa7ccb004@vsryyejeizfx4vylexg3qvbtwlecbbtdgh6cka72gnzv5tnvshypyvqd.onion:9735"
+```
 
-  -->
 </p>
 </details>
 
