@@ -145,7 +145,7 @@ We basically follow the guide [Digital Ocean provides here](https://www.digitalo
    - `wg genkey | sudo tee /etc/wireguard/private.key` # create private key
    - `sudo chmod go= /etc/wireguard/private.key` # change permissions of private key to this user only, otherwise it won't work
    - `sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key` # create public-key from your private one. Remember the location or make a node of it now, we'll need it soon
-   - choose an IP range which isn't used in your network now. We'll pick `10.0.0.0 to 10.255.255.255 (10/8 prefix)`, and dedicate `10.0.0.1` to the VPS, and `10.0.0.2` to your node later
+   - choose an IP range which isn't used in your network now. We'll pick `10.8.0.0 to 10.255.255.255 (10/8 prefix)`, and dedicate `10.8.0.1` to the VPS, and `10.8.0.2` to your node later
    - edit your VPS WG configuration: `sudo nano /etc/wireguard/wg0.conf`
 ```
 /etc/wireguard/wg0.conf
@@ -163,14 +163,13 @@ To activate packet forwarding, we need to add the first set of rules to the Wire
    - identify this device with `ip route list default`, which should show you something like `eth0`, `enps` just before the protocol.
    - Make a note of this device, it's your link to the internet, and substitute it in the code below if necessary. 
    - Copy this code below at the bottom of the file after the SaveConfig = true line: `sudo nano /etc/wireguard/wg0.conf`
+
 ```
-/etc/wireguard/wg0.conf
-. . .
 PostUp = ufw route allow in on wg0 out on eth0
 PostUp = iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
 PreDown = ufw route delete allow in on wg0 out on eth0
 PreDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
-```   
+```
 Save your changes again with `CTRL+X`, then `Y` and `Enter`
 
 #### VPS: LND and LNBits Port-Forwarding
@@ -188,9 +187,9 @@ sudo iptables -t nat -A POSTROUTING -o wg0 -p tcp --dport 9735 -d 10.8.0.2 -j SN
 
 
    - **Now don't forget** to allow SSH access and the WG UDP port: `sudo ufw allow 51820/udp` and `sudo ufw allow OpenSSH`
-   - **Best Practice**: Only allow SSH in from your home-IP: `sudo ufw allow from 185.111.222.0/24 proto tcp to any port 22 comment 'SSH from Home'`. Stay connected with two terminals and try to login once you do the below, to ensure you don't lock yourself out
+   - **Best Practice**: Only allow SSH in from your home-IP: `sudo ufw allow from 185.111.222.0/24 proto tcp to any port 22 comment 'SSH from Home'`. Stay connected with two terminals and try to login once you do the below, to ensure you don't lock yourself out. In case you have a dynamic IP at home, either follow [this guide](https://unix.stackexchange.com/a/91711) to use a dynamic-host and resolve it every x-minutes, or tighten [your SSH differently](https://linuxhint.com/secure-ssh-server-ubuntu/).
    - Ensure to do the next step again with two terminals logged in, so you can test if your UFW setting let's you login. In case you lock yourself out, you need to reimage the machine, and we want to avoid that learning exercise.
-   - `sudo ufw disable` and `sudo ufw enable` # Refresh uncomplicated firewall, and check the status with `sudo ufw status -v`
+   - `sudo ufw disable` and `sudo ufw enable` # Refresh uncomplicated firewall, and check the status with `sudo ufw status verbose`
    
    To keep those rules active after a reboot, another little nifty toolset is necessary to install:
 ```
