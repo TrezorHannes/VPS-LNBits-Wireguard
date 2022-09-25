@@ -561,7 +561,7 @@ Worth noting, that the directory `data` will hold all your database SQLite3 file
  | --- | --- |
  | `LNBITS_DATA_FOLDER="/user/lnbits-legend/data"` | enter the absolute path to the data folder you created above | 
  | `LNBITS_BACKEND_WALLET_CLASS=LndRestWallet` | Specify that we want to use our LND Node Wallet Rest-API
- | `LND_REST_ENDPOINT="https://10.8.0.2:8080"` | Add your `Lightning Node WG-Peer IP: 10.8.0.2` on port 8080 | 
+ | `LND_REST_ENDPOINT="https://10.8.0.2:8080/"` | Add your `Lightning Node WG-Peer IP: 10.8.0.2` on port 8080 | 
  | `LND_REST_CERT="/user/lnbits-legend/.cert/tls.cert"` | Add the link to the tls.cert file copied over earlier | 
  | `LND_REST_MACAROON="HEXSTRING"` | Copy the hex-encoded snippet from your LND Node Terminal output from Section 11.2 in here | 
  
