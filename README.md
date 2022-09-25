@@ -148,7 +148,6 @@ We basically follow the guide [Digital Ocean provides here](https://www.digitalo
    - choose an IP range which isn't used in your network now. We'll pick `10.8.0.0 to 10.255.255.255 (10/8 prefix)`, and dedicate `10.8.0.1` to the VPS, and `10.8.0.2` to your node later
    - edit your VPS WG configuration: `sudo nano /etc/wireguard/wg0.conf`
 ```
-/etc/wireguard/wg0.conf
 [Interface]
 PrivateKey = *base64_encoded_private_key_goes_here*
 Address = 10.8.0.1/24
@@ -262,7 +261,6 @@ Now we'll create the wg0.conf on your node. The upper interface part is your nod
    - Open up the `sudo nano /etc/wireguard/wg0.conf`
 
 ```
-/etc/wireguard/wg0.conf
 [Interface]
 PrivateKey = base64_encoded_peer_private_key_goes_here
 Address = 10.8.0.2/24
