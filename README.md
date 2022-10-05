@@ -1,4 +1,5 @@
 
+
 # VPS-LNbits with WireGuard VPN
 _An alternative Documentation to setup LNbits on a VPS, connected to your Lightning Network Node through a secured tunnel_
 
@@ -218,23 +219,23 @@ $ sudo apt-get install git -y
 $ git clone https://github.com/lnbits/lnbits-legend
 $ cd lnbits-legend/ 
 
-$ python3.7 -m venv venv
-$ ./venv/bin/pip install -r requirements.txt
-$ ./venv/bin/python build.py
+# for making sure python 3.9 is installed, check with python3 --version, skip this block if installed 3.9 or newer
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.9 python3.9-distutils
+
+$ curl -sSL https://install.python-poetry.org | python3 -
+$ export PATH="/home/ubuntu/.local/bin:$PATH" # or whatever is suggested in the poetry install notes printed to terminal. this is important!
+$ poetry env use python3.9 # or reference 3.10 if you have a newer version installed
+$ poetry install --only main
+$ poetry run python build.py
+
 $ mkdir data && cp .env.example .env
-$ ./venv/bin/uvicorn lnbits.__main__:app --port 5000
+$ poetry run lnbits --port 5000
 ```
-
-If you get an error with your instance, see for adding additional packages here [^bignote] 
-
-[^bignote]: 		
-		$ sudo  apt-get install python3-dev && sudo apt-get install build-essential
-		$ sudo apt install software-properties-common -y # possibility to add alternative python versions
-		$ sudo add-apt-repository ppa:deadsnakes/ppa -y 
-		$ sudo apt install python3.7 # 3.7 seems to be the most stable version for now, might change
-		$ sudo apt install python3.7-venv # that's the virtual environment for python to run our server
-		
-If you still run into trouble, check out the [original troubleshooting hints](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#troubleshooting). 
+	
+If you run into trouble, check out the [original troubleshooting hints](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#troubleshooting). 
 Now when this is successfully starting, you can abort with CTRL-C. We will come back to this for further configuration editing LNBits' config-file to our desired setup.
 
 
@@ -261,6 +262,7 @@ Now we'll create the wg0.conf on your node. The upper interface part is your nod
    - Open up the `sudo nano /etc/wireguard/wg0.conf`
 
 ```
+/etc/wireguard/wg0.conf
 [Interface]
 PrivateKey = base64_encoded_peer_private_key_goes_here
 Address = 10.8.0.2/24
@@ -586,7 +588,7 @@ Description=LNbits
 [Service]
 # replace with the absolute path of your lnbits installation
 WorkingDirectory=/home/lnbits/lnbits-legend
-ExecStart=/home/lnbits/lnbits-legend/venv/bin/uvicorn lnbits.__main__:app --port 5000
+ExecStart=/home/lnbits/.local/bin/poetry run lnbits --port 5000
 User=lnbits
 Restart=always
 TimeoutSec=120
@@ -603,11 +605,9 @@ sudo systemctl start lnbits.service
 ```
 When this is successful, it'll report your wallet balance of your node, and you can move on. If not, a good debugging approach is to connect from the VPS to your node via `curl https://10.8.0.2:8080 -v --cacert /user/.cert/tls.cert`. 
 
- LNBits should now be running and listening on all incoming requests on port 5000. If you're impatient, add a temporary[^1] ufw exception to test it: `sudo ufw allow 5000/tcp comment 'temporary lnbits check'` and open the corresponding `VPS Public IP: 207.154.241.101:5000`. And the command `netstat -tulpen | grep 5000` should show the process listening.
+ LNBits should now be running and listening on all incoming requests on port 5000. If you're impatient, you can `curl https://127.0.0.1:5000` and you should see a text-version of the LNBits UI. Note that because the way we run LNBits only locally, you can't test external access just yet. If `curl` doesn't provide meaningful response, check with the command `netstat -tulpen | grep 5000` to see if your process listening on port 5000.
 
-If you see your own LNBits instance, with all your _Optional Adjustments_ added, we'll go to the last, final endboss. 
-
-[^1]: To remove the ufw setting - we don't want to expose any unnecessary ports - call `sudo ufw status numbered`, followed by `sudo ufw delete #number` of the two port 5000 entries. We don't need them, since we reverse-proxy via nginx next.
+If it looks all good, we'll go to the last, final endboss. 
 
 
 ### Your domain, Webserver and SSL setup
