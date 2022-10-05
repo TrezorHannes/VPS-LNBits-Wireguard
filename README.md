@@ -147,10 +147,10 @@ We basically follow the guide [Digital Ocean provides here](https://www.digitalo
    - `sudo chmod go= /etc/wireguard/private.key` # change permissions of private key to this user only, otherwise it won't work
    - `sudo cat /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key` # create public-key from your private one. Remember the location or make a node of it now, we'll need it soon
    - choose an IP range which isn't used in your network now. We'll pick `10.8.0.0 to 10.255.255.255 (10/8 prefix)`, and dedicate `10.8.0.1` to the VPS, and `10.8.0.2` to your node later
-   - edit your VPS WG configuration: `sudo nano /etc/wireguard/wg0.conf`
+   - edit your VPS WG configuration: `sudo nano /etc/wireguard/wg0.conf` and ensure you add your previously generated privkey from `cat /etc/wireguard/private.key` into the configuration file below:
 ```
 [Interface]
-PrivateKey = *base64_encoded_private_key_goes_here*
+PrivateKey = ***base64_encoded_private_key_goes_here***
 Address = 10.8.0.1/24
 ListenPort = 51820
 SaveConfig = true
@@ -220,10 +220,10 @@ $ git clone https://github.com/lnbits/lnbits-legend
 $ cd lnbits-legend/ 
 
 # for making sure python 3.9 is installed, check with python3 --version, skip this block if installed 3.9 or newer
-sudo apt update
-sudo apt install software-properties-common
-sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt install python3.9 python3.9-distutils
+$ sudo apt update
+$ sudo apt install software-properties-common
+$ sudo add-apt-repository ppa:deadsnakes/ppa
+$ sudo apt install python3.9 python3.9-distutils
 
 $ curl -sSL https://install.python-poetry.org | python3 -
 $ export PATH="/home/ubuntu/.local/bin:$PATH" # or whatever is suggested in the poetry install notes printed to terminal. this is important!
@@ -605,7 +605,7 @@ sudo systemctl start lnbits.service
 ```
 When this is successful, it'll report your wallet balance of your node, and you can move on. If not, a good debugging approach is to connect from the VPS to your node via `curl https://10.8.0.2:8080 -v --cacert /user/.cert/tls.cert`. 
 
- LNBits should now be running and listening on all incoming requests on port 5000. If you're impatient, you can `curl https://127.0.0.1:5000` and you should see a text-version of the LNBits UI. Note that because the way we run LNBits only locally, you can't test external access just yet. If `curl` doesn't provide meaningful response, check with the command `netstat -tulpen | grep 5000` to see if your process listening on port 5000.
+LNBits should now be running and listening on all incoming requests on port 5000. If you're impatient, you can `curl https://127.0.0.1:5000` and you should see a text-version of the LNBits UI. Note that because the way we run LNBits only locally, you can't test external access just yet. If `curl` doesn't provide meaningful response, check with the command `netstat -tulpen | grep 5000` to see if your process listening on port 5000.
 
 If it looks all good, we'll go to the last, final endboss. 
 
