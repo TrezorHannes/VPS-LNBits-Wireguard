@@ -5,7 +5,7 @@ _An alternative Documentation to setup LNbits on a VPS, connected to your Lightn
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Brenner_Base_Tunnel_Aicha-Mauls.jpg/640px-Brenner_Base_Tunnel_Aicha-Mauls.jpg" alt="Brennerbasistunnel – Wikipedia"/>
 
-This is a fork / alternative my Guide [provided here](https://github.com/TrezorHannes/vps-lnbits), but instead of OpenVPN, we're using the somewhat smaller / simpler WireGuard Solution.
+This is a fork / alternative to my Guide [provided here](https://github.com/TrezorHannes/vps-lnbits), but instead of OpenVPN, we're using the somewhat smaller / simpler WireGuard Solution.
 The Problem statement remains the same, you may prefer one solution over the other. Have a read through both and see what fits better. But in either case, you're coming here for the following reasons:
 - have a dynamic IP from your Internet Service Provider
 - want to hide your home IP from the world, for whatever reason
@@ -137,7 +137,7 @@ $ ufw allow 443 comment 'SSL Webserver'
 $ ufw allow 9735 comment 'LND Main Node 1'
 $ ufw enable
 ```
-   - Follow [further hardening steps](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-18-04)
+   - [ ] Follow [further hardening steps](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-22-04), especially step 2) and 3) in the link, to set up non-root users for additional security enhancements. We consider in this guide you have added a user "admin" with sudo rights from this step forward.
    - Install fail2ban to protect your SSH user, it runs automatically on it's own `sudo apt install fail2ban`
 
 ### VPS: Install Wireguard
@@ -226,7 +226,7 @@ $ sudo add-apt-repository ppa:deadsnakes/ppa
 $ sudo apt install python3.9 python3.9-distutils
 
 $ curl -sSL https://install.python-poetry.org | python3 -
-$ export PATH="/home/ubuntu/.local/bin:$PATH" # or whatever is suggested in the poetry install notes printed to terminal. this is important!
+$ export PATH="/home/admin/.local/bin:$PATH" # or whatever is suggested in the poetry install notes printed to terminal. this is important!
 $ poetry env use python3.9 # or reference 3.10 if you have a newer version installed
 $ poetry install --only main
 $ poetry run python build.py
@@ -539,30 +539,28 @@ For that, let's climb another tricky obstacle; to respect the excellent security
 
 **Note of warning again**: Both of those files are highly sensitive. Don't show them to anyone, don't transfer them via Email, just follow the secure channel below and you should be fine, as long you keep the security barriers installed in [Section "Secure"](#secure) intact.
 
-1) your tls.cert. Be aware that this file changes **only** after you have added the `tlsextraip` settings in `lnd.conf`, and restarted LND. Check it's creation date with `ls -la ~/.lnd/tls.cert` to ensure it's quite recent. Otherwise your changes are not implemented and the certificate not valid. Only with access to this file, your VPS is going to be allowed to leverage your LND Wallet via Rest-API. Switch terminals to your VPS, and pull the file via  `scp admin@10.8.0.2:/home/admin/.lnd/tls.cert ./` to your VPS. Place it somewhere safe (eg `~/.cert`) and lock it up `chmod 600 ~/.cert/tls.cert`. 
+1) your tls.cert. Be aware that this file changes **only** after you have added the `tlsextraip` settings in `lnd.conf`, and restarted LND. Check it's creation date with `ls -la ~/.lnd/tls.cert` to ensure it's quite recent. Otherwise your changes are not implemented and the certificate not valid. Only with access to this file, your VPS is going to be allowed to leverage your LND Wallet via Rest-API. Switch terminals to your VPS, 
+
+ - create a new folder, which we'll secure with `mkdir ~/.secret`
+ - pull the file via  `scp admin@10.8.0.2:/home/admin/.lnd/tls.cert ~/.secret` to your VPS
+ - lock it up `chmod 600 ~/.secret/tls.cert`
 
 2) your admin.macaroon. Only with that, your VPS can send and receive payments
 `xxd -ps -u  ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` will provide you with a long, hex-encoded string. Keep that terminal window open, since we need to copy that code and use it in our next step on the VPS.
 
 
 ### VPS: Customize and configure LNBits to connect to your LNDRestWallet
- Now since we're back in the VPS terminal, keep your LND Node Terminal open. We'll adjust the LNBits environment settings, and we'll distinguish between _necessary_ and _optional_ adjustments. First, send the following commands to move the cert, restrict it's access, and start editing the environment settings for LNBits:
-```
-$ cd lnbits-legend
-$ mkdir .cert
-$ sudo mv ~/tls.cert ~/lnbits-legend/.cert/
-$ sudo chmod go= ~/lnbits-legend/.cert/
-$ sudo nano .env
-```
-Worth noting, that the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept. For the real deal, check out this guide how to setup your [LNBits with PostgreSQL](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#sqlite-to-postgresql-migration), which is highly reocmmended by the LNBits Dev Team. They just migrated their SQLite db to postgres as well.
+ Now since we're back in the VPS terminal, keep your LND Node Terminal open. We'll adjust the LNBits environment settings, and we'll distinguish between _necessary_ and _optional_ adjustments. First, send the following commands to move the cert, restrict it's access, and start editing the environment settings for LNBits: `nano ~/lnbits-legend/.env`
+
+Worth noting, the directory `data` will hold all your database SQLite3 files. So in case you consider proper backup or migration procedures, this directory is the key to be kept. For the real deal, check out this guide how to setup your [LNBits with PostgreSQL](https://github.com/lnbits/lnbits-legend/blob/main/docs/guide/installation.md#sqlite-to-postgresql-migration), which is highly reocmmended by the LNBits Dev Team. They just migrated their SQLite db to postgres as well.
 
 #### Necessary adjustments
  | Variable | Description |
  | --- | --- |
- | `LNBITS_DATA_FOLDER="/user/lnbits-legend/data"` | enter the absolute path to the data folder you created above | 
+ | `LNBITS_DATA_FOLDER="/home/admin/lnbits-legend/data"` | enter the absolute path to the data folder you created above | 
  | `LNBITS_BACKEND_WALLET_CLASS=LndRestWallet` | Specify that we want to use our LND Node Wallet Rest-API
  | `LND_REST_ENDPOINT="https://10.8.0.2:8080"` | Add your `Lightning Node WG-Peer IP: 10.8.0.2` on port 8080 | 
- | `LND_REST_CERT="/user/lnbits-legend/.cert/tls.cert"` | Add the link to the tls.cert file copied over earlier | 
+ | `LND_REST_CERT="/home/admin/.secret/tls.cert"` | Add the link to the tls.cert file copied over earlier | 
  | `LND_REST_MACAROON="HEXSTRING"` | Copy the hex-encoded snippet from your LND Node Terminal output from Section 11.2 in here | 
  
  #### Optional adjustments
@@ -587,9 +585,9 @@ Description=LNbits
 
 [Service]
 # replace with the absolute path of your lnbits installation
-WorkingDirectory=/home/lnbits/lnbits-legend
-ExecStart=/home/lnbits/.local/bin/poetry run lnbits --port 5000
-User=lnbits
+WorkingDirectory=/home/admin/lnbits-legend
+ExecStart=/home/admin/.local/bin/poetry run lnbits --port 5000
+User=admin
 Restart=always
 TimeoutSec=120
 RestartSec=30
@@ -603,7 +601,7 @@ Save and then enable it
 sudo systemctl enable lnbits.service
 sudo systemctl start lnbits.service
 ```
-When this is successful, it'll report your wallet balance of your node, and you can move on. If not, a good debugging approach is to connect from the VPS to your node via `curl https://10.8.0.2:8080 -v --cacert /user/.cert/tls.cert`. 
+When this is successful, it'll report your wallet balance of your node, and you can move on. If not, a good debugging approach is to connect from the VPS to your node via `curl https://10.8.0.2:8080 -v --cacert ~/admin/.secret/tls.cert`. 
 
 LNBits should now be running and listening on all incoming requests on port 5000. If you're impatient, you can `curl https://127.0.0.1:5000` and you should see a text-version of the LNBits UI. Note that because the way we run LNBits only locally, you can't test external access just yet. If `curl` doesn't provide meaningful response, check with the command `netstat -tulpen | grep 5000` to see if your process listening on port 5000.
 
