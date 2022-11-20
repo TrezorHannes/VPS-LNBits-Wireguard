@@ -174,7 +174,7 @@ Save your changes again with `CTRL+X`, then `Y` and `Enter`
 
 #### VPS: LND and LNBits Port-Forwarding
 Following the above section about packets going out, we want to ensure LND and LNBits packets coming into your VPS will get forwarded to your node. We do this step now already, even though the Node isn't connected to the tunnel yet. The following pre-requisite is important to check, in case your system is different, please alter the LND port accordingly:
-   - Assumption: your current LND Node configuration is listening on port 9735, which you can verify by looking into your `cat ~/.lnd/lnd.conf` => `[Application Options]` => `listen=0.0.0.0:9735`
+   - Assumption: your current LND Node configuration is listening on port 9735, which you can verify by looking into your `cat ~/.lnd/lnd.conf` => `[Application Options]` => `listen=0.0.0.0:9735` or just do a `cat .lnd/lnd.conf | grep restlisten`
    - add the following forwarding and routing rules to your iptables
 ```       
 sudo iptables -P FORWARD DROP
@@ -262,9 +262,8 @@ Now we'll create the wg0.conf on your node. The upper interface part is your nod
    - Open up the `sudo nano /etc/wireguard/wg0.conf`
 
 ```
-/etc/wireguard/wg0.conf
 [Interface]
-PrivateKey = base64_encoded_peer_private_key_goes_here
+PrivateKey = ***base64_encoded_peer_private_key_goes_here***
 Address = 10.8.0.2/24
 
 [Peer]
