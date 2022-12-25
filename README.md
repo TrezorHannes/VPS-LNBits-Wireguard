@@ -1,11 +1,9 @@
-
-
 # VPS-LNbits with WireGuard VPN
 _An alternative Documentation to setup LNbits on a VPS, connected to your Lightning Network Node through a secured tunnel_
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Brenner_Base_Tunnel_Aicha-Mauls.jpg/640px-Brenner_Base_Tunnel_Aicha-Mauls.jpg" alt="Brennerbasistunnel – Wikipedia"/>
 
-This is a fork / alternative to my Guide [provided here](https://github.com/TrezorHannes/vps-lnbits), but instead of OpenVPN, we're using the somewhat smaller / simpler WireGuard Solution.
+This is a simpler fork / alternative to my Guide [provided here](https://github.com/TrezorHannes/vps-lnbits), but instead of OpenVPN, we're using WireGuard here.
 The Problem statement remains the same, you may prefer one solution over the other. Have a read through both and see what fits better. But in either case, you're coming here for the following reasons:
 - have a dynamic IP from your Internet Service Provider
 - want to hide your home IP from the world, for whatever reason
@@ -45,8 +43,8 @@ The Problem statement remains the same, you may prefer one solution over the oth
   - [VPS: Start LNBits and test the LND Node wallet connection](#vps-start-lnbits-and-test-the-lnd-node-wallet-connection)
   - [Your domain, Webserver and SSL setup](#your-domain-webserver-and-ssl-setup)
     - [Domain](#domain)
-    - [VPS: SSL certificate](#vps-ssl-certificate)
-    - [VPS: Webserver NGINX](#vps-webserver-nginx)
+    - [VPS Webserver Option 1: Caddy 🆕 ](#-vps-caddy-web-server)
+    - [VPS Webserver Option 2: NGINX](#vps-nginx-web-server)
 - [Appendix & FAQ](#appendix--faq)
 
 
@@ -608,6 +606,8 @@ If it looks all good, we'll go to the last, final endboss.
 
 
 ### Your domain, Webserver and SSL setup
+(new version with caddy web server)
+
 We don't want to share our IP-Adress for others to pay us, a domain name is a much better brand. And we want to keep it secure, so we need to get us an SSL certificate. Good for you, both options are available for free, just needs some further work.
 
 #### Domain
@@ -615,9 +615,102 @@ While there are plenty of domain-name providers out there, we are going to use a
    - [ ] make an account on DuckDNS with GH or Email
    - [ ] add 1 of 5 free subdomains, eg. paymeinsats
    - [ ] point this domain to your `VPS Public IP: 207.154.241.101`
-   - [ ] Make a note of your Token
+   - [ ] Make a note of your Token in case you chose nginx as webserver below
 
-Keep the site open, we'll need it soon
+
+In this guide, you can chose either Caddy or Nginx as webserver install. The former is way simpler, but in case you're more familiar with Nginx, go for the latter:
+
+#### 🆕 VPS: Caddy web server
+<details><summary>Click here to expand the web-server setup with Caddy as a web server</summary>
+<p>
+
+
+Caddy is an open source web server with automatic HTTPS certification and brings the web interface of your LNbits instance to the clearnet. It really takes care of everything very efficiently. You only have to point the DNS entry of the (sub)domain to the IP address of the VPS, and Caddy takes care of the rest.
+
+##### First: Check DNS entry
+
+Check beforehand whether the DNS entry also works and forwards the web domain directly to your VPS IP address. With [DNS Lookup](https://mxtoolbox.com/DNSLookup.aspx) or [whatsmydns.net](https://www.whatsmydns.net/).
+
+##### Install Caddy
+```
+$ cd ~
+$ sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+$ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+$ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+$ sudo apt update
+$ sudo apt install caddy
+```
+
+##### Create the Caddyfile
+```
+$ sudo caddy stop
+$ sudo nano /etc/caddy/Caddyfile
+```
+
+##### Fill the file with an adjusted domain address
+```
+paymeinsats.duckdns.org {
+  handle /api/v1/payments/sse* {
+    reverse_proxy 0.0.0.0:5000 {
+      header_up X-Forwarded-Host paymeinsats.duckdns.org
+      transport http {
+         keepalive off
+         compression off
+      }
+    }
+  }
+  reverse_proxy 0.0.0.0:5000 {
+    header_up X-Forwarded-Host paymeinsats.duckdns.org
+  }
+}
+```
+`CTRL-X` => `Yes` => `Enter` to save
+
+##### Add caddy autostart service
+```
+$ sudo nano /etc/systemd/system/caddy.service
+```
+##### Replace content with
+```
+# caddy.service
+
+[Unit]
+Description=Caddy
+Documentation=https://caddyserver.com/docs/
+After=network.target network-online.target
+Requires=network-online.target
+
+[Service]
+Type=notify
+User=caddy
+Group=caddy
+ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+LimitNPROC=512
+PrivateDevices=yes
+PrivateTmp=true
+ProtectSystem=full
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+```
+`CTRL-X` => `Yes` => `Enter` to save
+
+##### Enable, start and check service
+```
+$ sudo systemctl enable caddy.service
+$ sudo systemctl start caddy.service
+$ sudo systemctl status caddy.service
+```
+</p>
+</details>
+
+#### VPS: nginx web server
+<details><summary>Click here to expand if you prefer to use nginx web-server setup, which is more complex but also battle-tested</summary>
+<p>
 
 #### VPS: SSL certificate
 You want your secure https:// site to confirm to your visitor's browser that you're legit. For this, we will use Certbot to manage our SSL certificate management, even though LNBits recommends [caddy](https://caddyserver.com/docs/install#debian-ubuntu-raspbian). Use your own preference, we'll walk through [certbot](https://certbot.eff.org/instructions?ws=nginx&os=ubuntufocal) with wildcard here:
@@ -690,6 +783,8 @@ nginx: configuration file /etc/nginx/nginx.conf test is successful
 $ sudo ln -s /etc/nginx/sites-available/paymeinsats.conf /etc/nginx/sites-enabled/
 $ sudo systemctl restart nginx
 ```
+</p>
+</details>
 
 Now the moment of truth: Go to your Website [https://paymeinsats.duckdns.org](https://paymeinsats.duckdns.org) and either celebrate 🍻 
 or troubleshoot where things could have gone wrong. If the former: Congratulations - you made it!
