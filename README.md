@@ -185,6 +185,7 @@ sudo iptables -t nat -A POSTROUTING -o wg0 -p tcp --dport 9735 -d 10.8.0.2 -j SN
 
 
    - **Now don't forget** to allow SSH access and the WG UDP port: `sudo ufw allow 51820/udp` and `sudo ufw allow OpenSSH`
+   - **Second critical reminder** in case you adjust ports above, or forward additional ports, ensure that your Node's firewall (nf or Iptables, ufw) accepts those incoming. Eg if your node rejects 8080 or 9736, your services connections will likely fail even though going through the tunnel
    - **Best Practice**: Only allow SSH in from your home-IP: `sudo ufw allow from 185.111.222.0/24 proto tcp to any port 22 comment 'SSH from Home'`. Stay connected with two terminals and try to login once you do the below, to ensure you don't lock yourself out. In case you have a dynamic IP at home, either follow [this guide](https://unix.stackexchange.com/a/91711) to use a dynamic-host and resolve it every x-minutes, or tighten [your SSH differently](https://linuxhint.com/secure-ssh-server-ubuntu/).
    - Ensure to do the next step again with two terminals logged in, so you can test if your UFW setting let's you login. In case you lock yourself out, you need to reimage the machine, and we want to avoid that learning exercise.
    - `sudo ufw disable` and `sudo ufw enable` # Refresh uncomplicated firewall, and check the status with `sudo ufw status verbose`
